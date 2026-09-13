@@ -18,6 +18,7 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 DEFAULT_CONCURRENCY = int(os.getenv("DEFAULT_CONCURRENCY", "200"))
 DEFAULT_TIMEOUT = float(os.getenv("DEFAULT_TIMEOUT", "6"))
 PORT = int(os.getenv("PORT", "8080"))
+GUILD_ID = os.getenv("GUILD_ID")  # optional: instant per-guild sync instead of ~1h global propagation
 
 MAX_PROXIES = 8000       # hard cap per run to keep local resource usage sane
 PROGRESS_MIN_INTERVAL = 3.0  # seconds between Discord message edits
@@ -144,9 +145,26 @@ async def proxy_command(
 
 @client.event
 async def on_ready():
-  await tree.sync()
   print(f"[+] Logged in as {client.user} (id: {client.user.id})")
   print(f"[+] SOCKS support: {'enabled' if SOCKS_AVAILABLE else 'disabled (pip install aiohttp_socks)'}")
+
+  try:
+    if GUILD_ID:
+      guild = discord.Object(id=int(GUILD_ID))
+      tree.copy_global_to(guild=guild)
+      synced = await tree.sync(guild=guild)
+      print(f"[+] Synced {len(synced)} command(s) to guild {GUILD_ID} (instant)")
+    else:
+      synced = await tree.sync()
+      print(f"[+] Synced {len(synced)} command(s) globally (can take up to 1h to appear)")
+  except discord.Forbidden:
+    print(
+        "[-] Sync failed: Forbidden. The bot was likely invited without the "
+        "'applications.commands' scope. Re-invite it with both 'bot' and "
+        "'applications.commands' checked in the OAuth2 URL Generator."
+    )
+  except Exception as e:
+    print(f"[-] Command sync failed: {type(e).__name__}: {e}")
 
 
 async def _health(request):
