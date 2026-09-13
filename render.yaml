@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: frixo-proxy-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python discord_bot.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DEFAULT_CONCURRENCY
+        value: "200"
+      - key: DEFAULT_TIMEOUT
+        value: "6"
+      - key: CHECK_URL
+        value: http://httpbin.org/get
